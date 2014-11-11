@@ -1,0 +1,4 @@
+# Built files
+lib/libstm32f10x.a
+local_install
+
