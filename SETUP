@@ -1,0 +1,5 @@
+In setting up for development, a local_install directory should be made on
+the project root.  Inside must be two symlinks: 
+
+stm_std_libs - linked to **
+FreeRTOS - linked to FreeRTOS/Source
