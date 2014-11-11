@@ -6,6 +6,7 @@
 # Path Definitions
 # This path should point to the STM32 Library directory
 STM_LIB ?= local_install/symlinks/stm_std_libs/
+FRTOS_LIB ?= local_install/symlinks/FreeRTOS/
 
 # Project Directories
 INCDIR = inc
@@ -17,7 +18,7 @@ LINKER_SCRIPT = linker_script
 
 # These are all the local project source files
 SRCS = $(SRCDIR)/scheduling.c $(SRCDIR)/sys_clk_init.c
-LIBS := $(LIBDIR)/lab04_tasks.a
+LIBS := $(LIBDIR)/lab06_task.a
 ELF := $(BINDIR)/scheduling.elf
 
 # Compiler
@@ -33,6 +34,10 @@ STM_CORE = CMSIS/CM3/CoreSupport
 STM_DEVICE_CORE = CMSIS/CM3/DeviceSupport/ST/STM32F10x
 STM_DEVICE_PERIPH = STM32F10x_StdPeriph_Driver
 
+# FreeRTOS specific info
+FRTOS_BUILD_DIR := $(BUILDDIR)/frtos_lib
+FRTOS_COMP_ARCH := GCC/ARM_CM3
+
 # These libary sources will be built into the STM libary for linking
 STM_LIB_PKG = $(BINDIR)/libstm32f10x.a
 STM_INCLUDES = $(addprefix -I$(STM_LIB), $(STM_CORE) $(STM_DEVICE_CORE) $(STM_DEVICE_PERIPH)/inc/) -include $(INCDIR)/stm32f10x_conf.h
@@ -41,11 +46,17 @@ STM_SOURCES_C = $(addprefix $(STM_LIB)/$(STM_DEVICE_PERIPH)/src/, stm32f10x_flas
 STM_OBJS := $(patsubst $(STM_LIB)/%,$(STM_BUILD_DIR)/%,$(STM_SOURCES_C:.c=.o) $(STM_SOURCES_ASM:.s=.o)) 
 STM_DEPS := $(patsubst $(STM_LIB)/%,$(STM_BUILD_DIR)/%,$(STM_SOURCES_C:.c=.d))
 
+# FreeRTOS info and includes
+FRTOS_PRTBL := $(addprefix $(FRTOS_LIB)/portable/, $(FRTOS_COMP_ARCH)/port.c MemMang/heap_1.c)
+FRTOS_SRC := $(addprefix $(FRTOS_LIB)/, tasks.c, queue.c, list.c), $(FRTOS_PRTBL)
+FRTOS_OBJS := $(patsubst $(FRTOS_LIB)/%,$(FRTOS_BUILD_DIR)/%,$(FRTOS_SRC:.c=.o))
+FRTOS_DEPS := $(patsubst $(FRTOS_LIB)/%,$(FRTOS_BUILD_DIR)/%,$(FRTOS_SRC:.c=.d))
+
 # Directories of used header files
 INCLUDE = -I$(INCDIR) $(STM_INCLUDES)
 
 # Define the compiler flags
-CFLAGS = -g -Wall -Wextra -Werror $(PROCESSOR) $(INCLUDE) $(STFLAGS) -Wl,--gc-sections -T $(LINKER_SCRIPT)/stm32_flash.ld
+CFLAGS = -v -g -Wall -Wextra -Werror $(PROCESSOR) $(INCLUDE) $(STFLAGS) -Wl,--gc-sections -T $(LINKER_SCRIPT)/stm32_flash.ld
 
 # This clever bit of make-fu builds dependency files for each source file so
 # that if the included files for that source file are updated, the object for
@@ -55,7 +66,7 @@ DEPGENFLAGS = -MMD -MP
 
 # Create the objects and dependencies based on the sources
 OBJS = $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SRCS:.c=.o))
-DEPENDENCIES := $(STM_DEPS) $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SRCS:.c=.d))
+DEPENDENCIES := $(STM_DEPS) $(FRTOS_DEPS) $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SRCS:.c=.d))
 
 # Build all relevant files and create .elf
 all: $(ELF)
@@ -66,6 +77,10 @@ $(STM_BUILD_DIR)/%.o: $(STM_LIB)/%.s
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 $(STM_BUILD_DIR)/%.o: $(STM_LIB)/%.c
+	@mkdir -p $(patsubst %/,%,$(dir $@)) # Create necessary dirs in build
+	$(CC) $(DEPGENFLAGS) $(CFLAGS) -o $@ -c $<
+
+$(FRTOS_BUILD_DIR)/%.o: $(FRTOS_LIB)/%.c
 	@mkdir -p $(patsubst %/,%,$(dir $@)) # Create necessary dirs in build
 	$(CC) $(DEPGENFLAGS) $(CFLAGS) -o $@ -c $<
 
