@@ -16,32 +16,14 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 #include <stdint.h>
 #include <stddef.h>
 #include <sys/types.h>
 
-/*
- * Initialize the GPIO which controls the LED
- */
-static void leds_init() {
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOB, ENABLE);
-
-	GPIO_InitTypeDef gpioStructure;
-	gpioStructure.GPIO_Pin = GPIO_Pin_5;
-	gpioStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOB, &gpioStructure);
-
-	GPIO_PinRemapConfig(GPIO_Remap_SWJ_NoJTRST, ENABLE);
-
-	gpioStructure.GPIO_Pin = GPIO_Pin_4;
-	gpioStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIOB, &gpioStructure);
-
-	GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_RESET);
-}
+/* Local helper functions */
+static void led_init();
 
 /* Define all of the tasks and their relationships */
 void log_debug_info_task(void* args);
@@ -57,12 +39,13 @@ void detect_emergency_task(void* args);
 #define LOG_DEBUG_INFO_TASK_PRIO	(tskIDLE_PRIORITY + 0)
 #define UPDATE_PID_TASK_PRIO		(tskIDLE_PRIORITY + 1)
 #define CALC_ORIENTATION_TASK_PRIO	(tskIDLE_PRIORITY + 2)
-#define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 3)
-#define DETECT_EMERGENCY_TASK_PRIO	(tskIDLE_PRIORITY + 4)
+#define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 2)
+#define DETECT_EMERGENCY_TASK_PRIO	(tskIDLE_PRIORITY + 3)
 
+SemaphoreHandle_t sensor_new_data;
 
 /*
- * Main function.  Initializes the GPIO, Timers, and
+ * Main function.  Initializes everything and makes it go.
  */
 int main() {
 	/* Disable interrupts so nothing funny happens */
@@ -72,8 +55,15 @@ int main() {
 	if (sys_clk_init_72mhz() != SUCCESS) {
 		for (;;) {}
 	}
-	leds_init();
+	led_init();
 	motor_init();
+
+	/* Create the semaphore for the blocking calc orientation */
+	sensor_new_data = xSemaphoreCreateBinary();
+	if (sensor_new_data == NULL) {
+		/* We badly failed. Give up. */
+		return 1;
+	}
 
 	/* Look for emergencies every 10ms */
 	xTaskCreate(detect_emergency_task, "detect_emergency_task", 1024, NULL,
@@ -99,6 +89,29 @@ int main() {
 
 	return 1;
 }
+
+/*
+ * Initialize the GPIO which controls the LED
+ */
+static void led_init() {
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOB, ENABLE);
+
+	GPIO_InitTypeDef gpioStructure;
+	gpioStructure.GPIO_Pin = GPIO_Pin_5;
+	gpioStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOB, &gpioStructure);
+
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_NoJTRST, ENABLE);
+
+	gpioStructure.GPIO_Pin = GPIO_Pin_4;
+	gpioStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOB, &gpioStructure);
+
+	GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_RESET);
+}
+
 
 /*
  * Just continually log the debug info in a loop.
@@ -133,23 +146,10 @@ void detect_emergency_task(void* args) {
 void update_sensor_task(void* args) {
 	(void) args;
 	TickType_t xLastWakeTime;
+	static unsigned int greenLedState = 0;
 
 	/* Initialize the xLastWakeTime variable with the current time. */
 	xLastWakeTime = xTaskGetTickCount();
-	while (1) {
-		/* Update the sensors once every 100ms */
-		refreshSensorData();
-		vTaskDelayUntil(&xLastWakeTime, 100);
-	}
-}
-
-/*
- * Calculates the orientation. Blocks on the new sensor data semaphore.
- */
-void calc_orientation_task(void* args) {
-	static unsigned int greenLedState = 0;
-	(void)args;
-
 	while (1) {
 		/* Toggle the green led */
 		if (greenLedState) {
@@ -159,6 +159,26 @@ void calc_orientation_task(void* args) {
 		}
 		/* Flip the state for next operation */
 		greenLedState = 1 - greenLedState;
+
+		/* Update the sensors once every 100ms */
+		refreshSensorData();
+
+		/* Trigger the new sensor data semaphore */
+		xSemaphoreGive(sensor_new_data);
+
+		vTaskDelayUntil(&xLastWakeTime, 100);
+	}
+}
+
+/*
+ * Calculates the orientation. Blocks on the new sensor data semaphore.
+ */
+void calc_orientation_task(void* args) {
+	(void)args;
+
+	while (1) {
+		/* Block waiting for new data */
+		xSemaphoreTake(sensor_new_data, portMAX_DELAY);
 
 		/* Calculate our orientation. */
 		calculateOrientation();
