@@ -14,6 +14,7 @@
 #include "stm32f10x.h"
 #include "stm32f10x_conf.h"
 
+#include "FreeRTOS.h"
 #include "task.h"
 
 #include <stdint.h>
@@ -43,6 +44,7 @@ static void leds_init() {
 }
 
 void update_sensor_task(void* args);
+void calculate_orientation_task(void* args);
 
 #define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 2)
 #define CALC_ORIENTATION_TASK_PRIO	(tskIDLE_PRIORITY + 1)
@@ -51,62 +53,40 @@ void update_sensor_task(void* args);
  * Main function.  Initializes the GPIO, Timers, and
  */
 int main() {
-//	__disable_irq();
+	/* Disable interrupts so nothing funny happens */
+	__disable_irq();
 
+	/* Initialize the hardware */
 	if (sys_clk_init_72mhz() != SUCCESS) {
 		for (;;) {}
 	}
 	leds_init();
-	tickHighPrioTimerInit();
-	tickLowPrioTimerInit();
-	motorInit();
-	motorTimersInit();
-	motorPwmInit();
+	motor_init();
 
 	/* Create the task for updating sensors */
-	xTaskCreate( update_sensor_task, "update_sensor_task", 1024, NULL, UPDATE_SENSOR_TASK_PRIO, NULL);
+	xTaskCreate(update_sensor_task, "update_sensor_task", 1024, NULL,
+			UPDATE_SENSOR_TASK_PRIO, NULL);
+	/* And updating the orientation calculation */
+	xTaskCreate(calculate_orientation_task, "calculate_orientation_task", 1024, NULL,
+			CALC_ORIENTATION_TASK_PRIO, NULL);
 
 	/* Start the scheduler. This enables interupts. */
 	vTaskStartScheduler();
 
-	/* Loop. Forever. */
-	for (;;) {
-		/* When we aren't doing stuff in interrupts, run the logger. */
-		logDebugInfo();
-	}
+	/* When we aren't doing stuff in interrupts, run the logger. */
+	logDebugInfo();
+
+	return 1;
 }
 
 /*
  * Updates the sensor data periodicly.
  */
 void update_sensor_task(void* args) {
-	while (1) {
-
-	}
-}
-
-/*
- * Calculates the orientation. Blocks on the new sensor data semaphore.
- */
-void calculate_orientation_task(void* args) {
-	while (1) {
-
-	}
-}
-
-/*
- * Interrupt service routines.
- * Function callers setup in "startup_stm32f10x_md.s"
- */
-
-/* High priority tasks */
-void TIM1_UP_IRQHandler() {
 	static unsigned int updateSensorCount = 0;
+	(void)args;
 
-	/* Clear the interrupt flag. */
-	if (TIM_GetITStatus(TIM1, TIM_IT_Update) != RESET) {
-		TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
-
+	while (1) {
 		/* Detect and emergency once every 10ms */
 		detectEmergency();
 
@@ -119,16 +99,16 @@ void TIM1_UP_IRQHandler() {
 	}
 }
 
-/* Low priority tasks, every 500ms */
-void TIM2_IRQHandler() {
+/*
+ * Calculates the orientation. Blocks on the new sensor data semaphore.
+ */
+void calculate_orientation_task(void* args) {
 	static unsigned int greenLedState = 0;
 	static unsigned int redLedState = 0;
 	static unsigned int oneHzCount = 0;
+	(void)args;
 
-	/* Check the interrupt and clear the flag. */
-	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-
+	while (1) {
 		/* Toggle the green led */
 		if (greenLedState) {
 			GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
@@ -156,13 +136,12 @@ void TIM2_IRQHandler() {
 			/* Update the motors */
 			MotorSpeeds newSpeeds = {0, 0, 0, 0};
 			updatePid(&newSpeeds);
-			motorSet(Motor1, 25*newSpeeds.m1);
-			motorSet(Motor2, 25*newSpeeds.m2);
-			motorSet(Motor3, 25*newSpeeds.m3);
-			motorSet(Motor4, 25*newSpeeds.m4);
+			motor_set(Motor1, 25*newSpeeds.m1);
+			motor_set(Motor2, 25*newSpeeds.m2);
+			motor_set(Motor3, 25*newSpeeds.m3);
+			motor_set(Motor4, 25*newSpeeds.m4);
 
 			oneHzCount = 0;
 		}
 	}
 }
-

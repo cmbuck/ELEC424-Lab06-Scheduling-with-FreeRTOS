@@ -21,13 +21,13 @@
 							<builder id="cdt.managedbuild.target.gnu.builder.base.1581171638" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.66133255" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.543693004" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
-								<option id="gnu.cpp.compiler.option.preprocessor.def.372260653" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
+								<option id="gnu.cpp.compiler.option.preprocessor.def.372260653" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="STM32F10X_MD"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1311064380" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1229914158" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.295399419" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.295399419" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="STM32F10X_MD"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.436561753" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
@@ -44,6 +44,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="local_install/symlinks/FreeRTOS/portable/BCC/|local_install/symlinks/FreeRTOS/portable/CCS/|local_install/symlinks/FreeRTOS/portable/CodeWarrior/|local_install/symlinks/FreeRTOS/portable/IAR/|local_install/symlinks/FreeRTOS/portable/Keil/|local_install/symlinks/FreeRTOS/portable/MemMang/|local_install/symlinks/FreeRTOS/portable/MPLAB/|local_install/symlinks/FreeRTOS/portable/MSVC-MingW/|local_install/symlinks/FreeRTOS/portable/oWatcom/|local_install/symlinks/FreeRTOS/portable/Paradigm/|local_install/symlinks/FreeRTOS/portable/Renesas/|local_install/symlinks/FreeRTOS/portable/Rowley/|local_install/symlinks/FreeRTOS/portable/RVDS/|local_install/symlinks/FreeRTOS/portable/SDCC/|local_install/symlinks/FreeRTOS/portable/Softune/|local_install/symlinks/FreeRTOS/portable/Tasking/|local_install/symlinks/FreeRTOS/portable/WizC/|local_install/symlinks/FreeRTOS/portable/readme.txt|local_install/symlinks/FreeRTOS/portable/GCC/ARM_CA9/|local_install/symlinks/FreeRTOS/portable/GCC/ARM_CM0/|local_install/symlinks/FreeRTOS/portable/GCC/ARM_CM3_MPU/|local_install/symlinks/FreeRTOS/portable/GCC/ARM_CM4F/|local_install/symlinks/FreeRTOS/portable/GCC/ARM7_AT91FR40008/|local_install/symlinks/FreeRTOS/portable/GCC/ARM7_AT91SAM7S/|local_install/symlinks/FreeRTOS/portable/GCC/ARM7_LPC2000/|local_install/symlinks/FreeRTOS/portable/GCC/ARM7_LPC23xx/|local_install/symlinks/FreeRTOS/portable/GCC/ATMega323/|local_install/symlinks/FreeRTOS/portable/GCC/AVR32_UC3/|local_install/symlinks/FreeRTOS/portable/GCC/ColdFire_V2/|local_install/symlinks/FreeRTOS/portable/GCC/CORTUS_APS3/|local_install/symlinks/FreeRTOS/portable/GCC/H8S2329/|local_install/symlinks/FreeRTOS/portable/GCC/HCS12/|local_install/symlinks/FreeRTOS/portable/GCC/MCF5235/|local_install/symlinks/FreeRTOS/portable/GCC/MicroBlaze/|local_install/symlinks/FreeRTOS/portable/GCC/MicroBlazeV8/|local_install/symlinks/FreeRTOS/portable/GCC/MSP430F449/|local_install/symlinks/FreeRTOS/portable/GCC/NiosII/|local_install/symlinks/FreeRTOS/portable/GCC/PPC405_Xilinx/|local_install/symlinks/FreeRTOS/portable/GCC/PPC440_Xilinx/|local_install/symlinks/FreeRTOS/portable/GCC/RX100/|local_install/symlinks/FreeRTOS/portable/GCC/RX600/|local_install/symlinks/FreeRTOS/portable/GCC/RX600v2/|local_install/symlinks/FreeRTOS/portable/GCC/STR75x/|local_install/symlinks/FreeRTOS/portable/GCC/TriCore_1782/" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

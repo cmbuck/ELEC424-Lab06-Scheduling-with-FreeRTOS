@@ -15,7 +15,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-void motor_pwm_init() {
+static void motor_pwm_init() {
 	TIM_OCInitTypeDef outputChannelInit;
 	outputChannelInit.TIM_OCMode = TIM_OCMode_PWM1;
 	outputChannelInit.TIM_Pulse = 0; /* Set to 0% */
@@ -37,7 +37,7 @@ void motor_pwm_init() {
 /*
  * Initialize the GPIO which controls the Motors in alternate function mode (through TIM3/4)
  */
-void motor_pins_init() {
+static void motor_pins_init() {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO | RCC_APB2Periph_GPIOB, ENABLE);
 
 	GPIO_InitTypeDef gpioStructure;
@@ -57,7 +57,7 @@ void motor_pins_init() {
 /*
  * Initialize the timer and set the clock to the external oscillator
  */
-void motor_timers_init() {
+static void motor_timers_init() {
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
 
 	TIM_TimeBaseInitTypeDef timerInitStructure;
@@ -81,19 +81,25 @@ void motor_timers_init() {
 }
 
 /*
+ * Initializes the motors. Must be called before motor_set.
+ */
+void motor_init() {
+	motor_pins_init();
+	motor_timers_init();
+	motor_pwm_init();
+}
+
+/*
  * Set a motor to be on or off
  * @param  m : Select the motor to set the state for
  * 		Can be one of the following values
  * 		Motor1, Motor2, Motor3, Motor4
  * @param  s : Select the speed for the motor
- * 		Can be between 0 and 256
+ * 		Can be between 0 and 100
  */
 void motor_set(MotorEnum m, int duty) {
-	//MULT: preprocessor define -
-	//multiplier to convert speed to units in
-	//terms of the timer period
-	int pulse = duty * MOTOR_MULT;	//pulse width (in ticks) to achieve the
-	//desired duty cycle
+	/* Calculate the number of pulse counts in ticks to get the needed desired duty cycle. */
+	int pulse = duty * MOTOR_MULT;
 	switch (m) {
 	case Motor1:
 		MOTOR1_SET_COMPARE(MOTOR1_TIM, pulse);

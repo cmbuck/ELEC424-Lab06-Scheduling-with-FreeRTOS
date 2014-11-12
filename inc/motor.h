@@ -42,11 +42,10 @@ typedef enum {
 #define MOTOR3_SET_COMPARE(a, b)	TIM_SetCompare4(a, b);
 #define MOTOR4_SET_COMPARE(a, b)	TIM_SetCompare3(a, b);
 
+/* Multiplier to convert speed to units in terms of the timer period */
 #define MOTOR_MULT	(MOTOR_TIM_PERIOD / 100)
 
-void motor_pwm_init();
-void motor_pins_init();
-void motor_timers_init();
+void motor_init();
 void motor_set(MotorEnum m, int duty);
 
 #endif /* MOTOR_H_ */

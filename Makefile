@@ -17,7 +17,7 @@ LIBDIR = lib
 LINKER_SCRIPT = linker_script
 
 # These are all the local project source files
-SRCS = $(SRCDIR)/scheduling.c $(SRCDIR)/sys_clk_init.c
+SRCS = $(addprefix $(SRCDIR)/, scheduling.c sys_clk_init.c motor.c)
 LIBS := $(LIBDIR)/lab06_task.a
 ELF := $(BINDIR)/scheduling.elf
 
