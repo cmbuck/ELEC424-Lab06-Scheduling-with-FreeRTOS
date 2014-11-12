@@ -80,7 +80,17 @@ int main() {
  * Updates the sensor data periodicly.
  */
 void update_sensor_task(void* args) {
-	while (1) {
+	TickType_t xLastWakeTime;
+	const TickType_t xFrequency = 10;
+
+	// Initialise the xLastWakeTime variable with the current time.
+	xLastWakeTime = xTaskGetTickCount ();
+	for( ;; )
+	{
+	 // Wait for the next cycle.
+	 vTaskDelayUntil( &xLastWakeTime, xFrequency );
+
+	 // Perform action here.
 
 	}
 }
