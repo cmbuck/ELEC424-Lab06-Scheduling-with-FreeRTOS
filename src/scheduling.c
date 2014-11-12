@@ -31,8 +31,10 @@ void update_sensor_task(void* args);
 void calc_orientation_task(void* args);
 void update_pid_task(void* args);
 void detect_emergency_task(void* args);
+void green_led_task(void* args);
 
 #define UPDATE_PID_INTERVAL			(1000)
+#define GREEN_LED_INTERVAL			(500)
 #define CALC_ORIENTATION_INTERVAL	(100)
 #define DETECT_EMERGENCY_INTERVAL	(10)
 
@@ -40,6 +42,7 @@ void detect_emergency_task(void* args);
 #define UPDATE_PID_TASK_PRIO		(tskIDLE_PRIORITY + 1)
 #define CALC_ORIENTATION_TASK_PRIO	(tskIDLE_PRIORITY + 2)
 #define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 2)
+#define GREEN_LED_TASK_PRIO			(tskIDLE_PRIORITY + 3)
 #define DETECT_EMERGENCY_TASK_PRIO	(tskIDLE_PRIORITY + 3)
 
 SemaphoreHandle_t sensor_new_data;
@@ -77,6 +80,9 @@ int main() {
 	/* Update the motors every 1 second */
 	xTaskCreate(update_pid_task, "update_pid_task", 256, NULL,
 			UPDATE_PID_TASK_PRIO, NULL);
+	/* Toggle the green LED at 2Hz */
+	xTaskCreate(green_led_task, "green_led_task", 256, NULL,
+			GREEN_LED_TASK_PRIO, NULL);
 	/* Log the debug info when we get a chance */
 	xTaskCreate(log_debug_info_task, "log_debug_info_task", 256, NULL,
 			LOG_DEBUG_INFO_TASK_PRIO, NULL);
@@ -122,6 +128,32 @@ void log_debug_info_task(void* args) {
 }
 
 /*
+ * Blink the green LED at 1Hz
+ */
+void green_led_task(void* args) {
+	(void)args;
+	static unsigned int greenLedState = 0;
+	TickType_t xLastWakeTime;
+
+	/* Initialize the xLastWakeTime variable with the current time. */
+	xLastWakeTime = xTaskGetTickCount();
+	while (1) {
+		/* Toggle the green led */
+		if (greenLedState) {
+			GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
+		} else {
+			GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
+		}
+		/* Flip the state for next operation */
+		greenLedState = 1 - greenLedState;
+
+
+		/* Toggle at 2Hz */
+		vTaskDelayUntil(&xLastWakeTime, GREEN_LED_INTERVAL);
+	}
+}
+
+/*
  * Detects any emergency. Runs every 10ms at the highest priority.
  */
 void detect_emergency_task(void* args) {
@@ -143,20 +175,10 @@ void detect_emergency_task(void* args) {
 void update_sensor_task(void* args) {
 	(void) args;
 	TickType_t xLastWakeTime;
-	static unsigned int greenLedState = 0;
 
 	/* Initialize the xLastWakeTime variable with the current time. */
 	xLastWakeTime = xTaskGetTickCount();
 	while (1) {
-		/* Toggle the green led */
-		if (greenLedState) {
-			GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
-		} else {
-			GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
-		}
-		/* Flip the state for next operation */
-		greenLedState = 1 - greenLedState;
-
 		/* Update the sensors once every 100ms */
 		refreshSensorData();
 

@@ -46,6 +46,10 @@ Q3: What is the frequency of the system tick used in your code? What are the
 In our setup of FreeRTOS we set the SysTick system frequency to 1000 Hz (1ms
 tick) in order to allow for accurate timing.
 
+The highest frequency allowed is 1000 Hz due to integer division limitations
+within FreeRTOS. The lowest allowable frequency is 100 Hz because the detect
+emergency function must be run every 10 ms, or 100 Hz. Any slower and the 
+detect emergency task could not accurately be scheduled.
 
 
 Q4: There is also (obviously) a context switching implementation in FreeRTOS
