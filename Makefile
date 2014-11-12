@@ -6,7 +6,7 @@
 # Path Definitions
 # This path should point to the STM32 Library directory
 STM_LIB ?= local_install/symlinks/stm_std_libs
-FRTOS_LIB ?= local_install/symlinks/FreeRTOS
+FRTOS_LIB ?= lib/FreeRTOS_Source
 
 # Project Directories
 INCDIR = inc
