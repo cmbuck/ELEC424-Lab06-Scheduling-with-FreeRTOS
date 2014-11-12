@@ -1,21 +1,97 @@
-Lab05: Scheduling with FreeRTOS
-<PUT NAMES HERE>
+Lab06: Scheduling with FreeRTOS
+Jeremy Hunt (jrh6)
+Christopher Buck (cmb15)
 
 Part 1:
 
 Q1: What is the difference between semaphore and mutex?
+While they are largely the same, there are subtle differences between a
+semaphore and a mutex. Semaphores have a "count" which allows them to
+be taken and given "count" number of times. Each taking of the semaphore
+reduces the internal count until the number reaches 0, at which point
+additional takes block the calling task. Each giving of a semaphore
+increases the count by one. Mutexes are nearly identical to semaphores
+with "count" set to 1 (i.e. binary semaphores) but they come with an
+additional property: priority inversion. When a low priority task takes
+a mutex and is then preempted by a high priority task which also
+attempts to take the same mutex, the low priority task's priority is
+temporarily elevated to allow the low priority task to complete its use
+of the mutex. Once its mutex has been give by the low priority task, 
+the priority is reset back to normal, and the high priority task continues
+execution.
 
-Q2: What FreeRTOS uses to represent a task? Compared to what you used in Lab05 
-to represent a task, what features they share and what are the major differences?
+
+Q2: What does FreeRTOS use to represent a task? Compared to what you used
+    in Lab05 to represent a task, what features they share and what are
+    the major differences?
+FreeRTOS uses a Task Control Block to represent a task, which is at
+its core very similar to the task control block we used in Lab05. Both use
+structures containing the current top of the stack for each task (the top
+of the thread contains the state when not active), and both use doubly linked
+list structures to hold scheduling info and place the task in lists/queues.
+
+The FreeRTOS Task Control Block adds priorities to the scheduler, adding both
+a current and base priority. In addition, it adds stack bottom information
+which allows the system to dynamically allocate the thread stacks, a string
+task name for debugging, and another list entry which allows the task to
+be part of an event driven thread model, allowing the thread to be blocked
+on semaphores and mutexes and perform other even driven tasks.
+
+
 
 Part 2:
 
-Q3: What is the frequency of the system tick used in your code? What are the 
-highest and lowest system tick frequencies to get your Lab06 to work?
+Q3: What is the frequency of the system tick used in your code? What are the
+    highest and lowest system tick frequencies to get your Lab06 to work?
+In our setup of FreeRTOS we set the SysTick system frequency to 1000 Hz (1ms
+tick) in order to allow for accurate timing.
 
-Q4: There is also (obviously) a context switching implementation in FreeRTOS 
-source code for Cortex-M3, find the code and list the technical differences 
-from your context switching code in Lab05.
+
+
+Q4: There is also (obviously) a context switching implementation in FreeRTOS
+    source code for Cortex-M3, find the code and list the technical
+    differences from your context switching code in Lab05.
+
+Initializing the Stack:
+Our implementations are nearly identical. In our implementation we write
+0's to the unused registers, FreeRTOS does not. FreeRTOS also allows for
+the configuration of where tasks return to.
+
+Starting the First Thread:
+In FreeRTOS, the first thread is started using a system call SVC. This system
+call looks at the threads that are ready to run, and chooses the first one
+to run as in a normal system call. In our code we directly start the task by
+writing to the control register to switch to the PSP from the MSP.
+
+SysTick:
+The SysTick function in both our context switcher (pendsv based) and the
+FreeRTOS implementation just check to see if a context switch is needed,
+and then trigger PendSV if necessary. All switching is done in PendSV.
+
+PendSV:
+Both our PendSV and FreeRTOS are naked functions which start by saving
+the software exception stack (r4-r11) and the PSP and end by switching
+the PSP stack to the to-switch-to task and popping (r4-r11) back off that
+stack to start the context restore process. In addition, both versions
+call a C function which determines which task to switch to.
+
+The FreeRTOS version adds priorities to the process, saving and restoring
+the basepri register. In the thread determination function, the logic is
+also more complicated.
+
+
+Notes on FreeRTOSConfig.h:
+We started with a FreeRTOSConfig.h from 
+FreeRTOSV8.1.2/FreeRTOS/Demo/CORTEX_STM32F103_Primer_GCC
+Which was modified in the following ways:
+1. Changed configUSE_TICK_HOOK to 0
+2. Added the lines:
+/* Define the interupt vector handlers. */
+#define vPortSVCHandler SVC_Handler
+#define xPortPendSVHandler PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
+at the bottom in order to override the interrupt handlers.
 
 
 Contribution
@@ -23,6 +99,6 @@ Contribution
 Indicate the percentage work contributed by each partner below (should add up 
 to 100%). Needless to say, replace PARTNER1/2 with names.
 
-<PARTNER1>:
-<PARTNER2>:
+Jeremy Hunt: 50%
+Christopher Buck: 50%
 
