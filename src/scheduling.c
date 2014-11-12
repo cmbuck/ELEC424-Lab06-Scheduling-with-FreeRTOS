@@ -43,11 +43,23 @@ static void leds_init() {
 	GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_RESET);
 }
 
+/* Define all of the tasks and their relationships */
+void log_debug_info_task(void* args);
 void update_sensor_task(void* args);
-void calculate_orientation_task(void* args);
+void calc_orientation_task(void* args);
+void update_pid_task(void* args);
+void detect_emergency_task(void* args);
 
-#define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 2)
-#define CALC_ORIENTATION_TASK_PRIO	(tskIDLE_PRIORITY + 1)
+#define UPDATE_PID_INTERVAL			(1000)
+#define CALC_ORIENTATION_INTERVAL	(100)
+#define DETECT_EMERGENCY_INTERVAL	(10)
+
+#define LOG_DEBUG_INFO_TASK_PRIO	(tskIDLE_PRIORITY + 0)
+#define UPDATE_PID_TASK_PRIO		(tskIDLE_PRIORITY + 1)
+#define CALC_ORIENTATION_TASK_PRIO	(tskIDLE_PRIORITY + 2)
+#define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 3)
+#define DETECT_EMERGENCY_TASK_PRIO	(tskIDLE_PRIORITY + 4)
+
 
 /*
  * Main function.  Initializes the GPIO, Timers, and
@@ -63,12 +75,21 @@ int main() {
 	leds_init();
 	motor_init();
 
+	/* Look for emergencies every 10ms */
+	xTaskCreate(detect_emergency_task, "detect_emergency_task", 1024, NULL,
+			DETECT_EMERGENCY_TASK_PRIO, NULL);
 	/* Create the task for updating sensors */
 	xTaskCreate(update_sensor_task, "update_sensor_task", 1024, NULL,
 			UPDATE_SENSOR_TASK_PRIO, NULL);
 	/* And updating the orientation calculation */
-	xTaskCreate(calculate_orientation_task, "calculate_orientation_task", 1024, NULL,
+	xTaskCreate(calc_orientation_task, "calculate_orientation_task", 1024, NULL,
 			CALC_ORIENTATION_TASK_PRIO, NULL);
+	/* Update the motors every 1 second */
+	xTaskCreate(update_pid_task, "update_pid_task", 1024, NULL,
+			UPDATE_PID_TASK_PRIO, NULL);
+	/* Log the debug info when we get a chance */
+	xTaskCreate(log_debug_info_task, "log_debug_info_task", 1024, NULL,
+			LOG_DEBUG_INFO_TASK_PRIO, NULL);
 
 	/* Start the scheduler. This enables interupts. */
 	vTaskStartScheduler();
@@ -80,32 +101,53 @@ int main() {
 }
 
 /*
- * Updates the sensor data periodicly.
+ * Just continually log the debug info in a loop.
  */
-void update_sensor_task(void* args) {
-	static unsigned int updateSensorCount = 0;
+void log_debug_info_task(void* args) {
 	(void)args;
 
 	while (1) {
-		/* Detect and emergency once every 10ms */
-		detectEmergency();
+		logDebugInfo();
+	}
+}
 
+/*
+ * Detects any emergency. Runs every 10ms at the highest priority.
+ */
+void detect_emergency_task(void* args) {
+	(void) args;
+	TickType_t xLastWakeTime;
+
+	/* Initialize the xLastWakeTime variable with the current time. */
+	xLastWakeTime = xTaskGetTickCount();
+	while (1) {
+		/* Look for an emergency every 10ms */
+		detectEmergency();
+		vTaskDelayUntil(&xLastWakeTime, DETECT_EMERGENCY_INTERVAL);
+	}
+}
+
+/*
+ * Updates the sensor data periodically.
+ */
+void update_sensor_task(void* args) {
+	(void) args;
+	TickType_t xLastWakeTime;
+
+	/* Initialize the xLastWakeTime variable with the current time. */
+	xLastWakeTime = xTaskGetTickCount();
+	while (1) {
 		/* Update the sensors once every 100ms */
-		updateSensorCount++;
-		if (updateSensorCount >= 10) {
-			refreshSensorData();
-			updateSensorCount = 0;
-		}
+		refreshSensorData();
+		vTaskDelayUntil(&xLastWakeTime, 100);
 	}
 }
 
 /*
  * Calculates the orientation. Blocks on the new sensor data semaphore.
  */
-void calculate_orientation_task(void* args) {
+void calc_orientation_task(void* args) {
 	static unsigned int greenLedState = 0;
-	static unsigned int redLedState = 0;
-	static unsigned int oneHzCount = 0;
 	(void)args;
 
 	while (1) {
@@ -118,30 +160,39 @@ void calculate_orientation_task(void* args) {
 		/* Flip the state for next operation */
 		greenLedState = 1 - greenLedState;
 
-		/* Update all the things that need to happen at 1 Hz */
-		oneHzCount++;
-		if (oneHzCount >= 2) {
-			/* Toggle the red led */
-			if (redLedState) {
-				GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_RESET);
-			} else {
-				GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_SET);
-			}
-			/* Flip the state for next operation */
-			redLedState = 1 - redLedState;
+		/* Calculate our orientation. */
+		calculateOrientation();
+	}
+}
 
-			/* Calculate our orientation. */
-			calculateOrientation();
+/*
+ * Update the motors once per second. Also toggle the red LED.
+ */
+void update_pid_task(void* args) {
+	static unsigned int redLedState = 0;
+	(void) args;
+	TickType_t xLastWakeTime;
 
-			/* Update the motors */
-			MotorSpeeds newSpeeds = {0, 0, 0, 0};
-			updatePid(&newSpeeds);
-			motor_set(Motor1, 25*newSpeeds.m1);
-			motor_set(Motor2, 25*newSpeeds.m2);
-			motor_set(Motor3, 25*newSpeeds.m3);
-			motor_set(Motor4, 25*newSpeeds.m4);
-
-			oneHzCount = 0;
+	/* Initialize the xLastWakeTime variable with the current time. */
+	xLastWakeTime = xTaskGetTickCount();
+	while (1) {
+		/* Toggle the red led */
+		if (redLedState) {
+			GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_RESET);
+		} else {
+			GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_SET);
 		}
+		/* Flip the state for next operation */
+		redLedState = 1 - redLedState;
+
+		/* Update the motors */
+		MotorSpeeds newSpeeds = {0, 0, 0, 0};
+		updatePid(&newSpeeds);
+		motor_set(Motor1, 25*newSpeeds.m1);
+		motor_set(Motor2, 25*newSpeeds.m2);
+		motor_set(Motor3, 25*newSpeeds.m3);
+		motor_set(Motor4, 25*newSpeeds.m4);
+
+		vTaskDelayUntil(&xLastWakeTime, UPDATE_PID_INTERVAL);
 	}
 }
