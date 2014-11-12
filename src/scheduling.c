@@ -66,26 +66,23 @@ int main() {
 	}
 
 	/* Look for emergencies every 10ms */
-	xTaskCreate(detect_emergency_task, "detect_emergency_task", 1024, NULL,
+	xTaskCreate(detect_emergency_task, "detect_emergency_task", 256, NULL,
 			DETECT_EMERGENCY_TASK_PRIO, NULL);
 	/* Create the task for updating sensors */
-	xTaskCreate(update_sensor_task, "update_sensor_task", 1024, NULL,
+	xTaskCreate(update_sensor_task, "update_sensor_task", 256, NULL,
 			UPDATE_SENSOR_TASK_PRIO, NULL);
 	/* And updating the orientation calculation */
-	xTaskCreate(calc_orientation_task, "calculate_orientation_task", 1024, NULL,
+	xTaskCreate(calc_orientation_task, "calculate_orientation_task", 256, NULL,
 			CALC_ORIENTATION_TASK_PRIO, NULL);
 	/* Update the motors every 1 second */
-	xTaskCreate(update_pid_task, "update_pid_task", 1024, NULL,
+	xTaskCreate(update_pid_task, "update_pid_task", 256, NULL,
 			UPDATE_PID_TASK_PRIO, NULL);
 	/* Log the debug info when we get a chance */
-	xTaskCreate(log_debug_info_task, "log_debug_info_task", 1024, NULL,
+	xTaskCreate(log_debug_info_task, "log_debug_info_task", 256, NULL,
 			LOG_DEBUG_INFO_TASK_PRIO, NULL);
 
-	/* Start the scheduler. This enables interupts. */
+	/* Start the scheduler. This enables interrupts. */
 	vTaskStartScheduler();
-
-	/* When we aren't doing stuff in interrupts, run the logger. */
-	logDebugInfo();
 
 	return 1;
 }
