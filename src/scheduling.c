@@ -14,6 +14,8 @@
 #include "stm32f10x.h"
 #include "stm32f10x_conf.h"
 
+#include "task.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <sys/types.h>
@@ -40,58 +42,10 @@ static void leds_init() {
 	GPIO_WriteBit(GPIOB, GPIO_Pin_4, Bit_RESET);
 }
 
-/*
- * Initialize the High Priority Timer to run at 10 ms
- */
-static void tickHighPrioTimerInit() {
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+void update_sensor_task(void* args);
 
-	TIM_TimeBaseInitTypeDef timerInitStructure;
-	timerInitStructure.TIM_Prescaler = TIM1_PRESCALER;
-	timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
-	timerInitStructure.TIM_Period = TIM1_PERIOD;
-	timerInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-	timerInitStructure.TIM_RepetitionCounter = 0;
-	TIM_TimeBaseInit(TIM1, &timerInitStructure);
-	TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
-
-	TIM_Cmd(TIM1, ENABLE);
-
-	/* Initialize the interrupt for TIM1 */
-	NVIC_InitTypeDef nvicStructure;
-	nvicStructure.NVIC_IRQChannel = TIM1_UP_IRQn;
-	nvicStructure.NVIC_IRQChannelPreemptionPriority = TIM1_PRIO;
-	nvicStructure.NVIC_IRQChannelSubPriority = TIM1_SUB_PRIO;
-	nvicStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&nvicStructure);
-}
-
-/*
- * Initialize the Low Priority Timer to run at 500 ms
- */
-static void tickLowPrioTimerInit() {
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-
-	TIM_TimeBaseInitTypeDef tim2Init;
-	tim2Init.TIM_Prescaler = TIM2_PRESCALER;
-	tim2Init.TIM_CounterMode = TIM_CounterMode_Up;
-	tim2Init.TIM_Period = TIM2_PERIOD;
-	tim2Init.TIM_ClockDivision = TIM_CKD_DIV1;
-	tim2Init.TIM_RepetitionCounter = 0;
-	TIM_TimeBaseInit(TIM2, &tim2Init);
-
-	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-
-	TIM_Cmd(TIM2, ENABLE);
-
-	/* Initialize the interrupt for TIM2 */
-	NVIC_InitTypeDef tim2Nvic;
-	tim2Nvic.NVIC_IRQChannel = TIM2_IRQn;
-	tim2Nvic.NVIC_IRQChannelPreemptionPriority = 0;
-	tim2Nvic.NVIC_IRQChannelSubPriority = 1;
-	tim2Nvic.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&tim2Nvic);
-}
+#define UPDATE_SENSOR_TASK_PRIO		(tskIDLE_PRIORITY + 2)
+#define CALC_ORIENTATION_TASK_PRIO	(tskIDLE_PRIORITY + 1)
 
 /*
  * Main function.  Initializes the GPIO, Timers, and
@@ -109,9 +63,10 @@ int main() {
 	motorTimersInit();
 	motorPwmInit();
 
+	/* Create the task for updating sensors */
+	xTaskCreate( update_sensor_task, "update_sensor_task", 1024, NULL, UPDATE_SENSOR_TASK_PRIO, NULL);
 
-	xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL );
-
+	/* Start the scheduler. This enables interupts. */
 	vTaskStartScheduler();
 
 	/* Loop. Forever. */
@@ -121,8 +76,23 @@ int main() {
 	}
 }
 
+/*
+ * Updates the sensor data periodicly.
+ */
+void update_sensor_task(void* args) {
+	while (1) {
 
-void update_
+	}
+}
+
+/*
+ * Calculates the orientation. Blocks on the new sensor data semaphore.
+ */
+void calculate_orientation_task(void* args) {
+	while (1) {
+
+	}
+}
 
 /*
  * Interrupt service routines.
