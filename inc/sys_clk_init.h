@@ -14,4 +14,4 @@
  *   - SUCCESS: SYSCLK is running and ready at 72 MHz
  * 	 - ERROR: The clock failed to start and was left in the default state
  */
-ErrorStatus sysClkInit72Mhz();
+ErrorStatus sys_clk_init_72mhz();

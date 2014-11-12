@@ -15,36 +15,11 @@
 #define APB1_FREQ				36000000
 #define APB2_FREQ				36000000
 
-#define TIM1_FREQ				(2*APB2_FREQ)
-#define TIM1_PRESCALER			360
-#define TIM1_PERIOD				((TIM1_FREQ/TIM1_PRESCALER)/HIGH_PRIO_TICK_FREQ)
-#define TIM1_PRIO				1
-#define TIM1_SUB_PRIO			0
-
-#define TIM2_FREQ				(2*APB1_FREQ)
-#define TIM2_PRESCALER			36000
-#define TIM2_PERIOD				((TIM2_FREQ/TIM2_PRESCALER)/LOW_PRIO_TICK_FREQ)
-#define TIM2_PRIO				1
-#define TIM2_SUB_PRIO			1
-
 #define MOTOR_PWM_FREQ			36000
 #define MOTOR_TIM_FREQ			(2*APB2_FREQ)
 #define MOTOR_TIM_PRESCALER		(1-1)
 #define MOTOR_TIM_PERIOD		((MOTOR_TIM_FREQ/(MOTOR_TIM_PRESCALER+1))/MOTOR_PWM_FREQ)
 
-typedef enum {
-	Motor1, Motor2, Motor3, Motor4
-} MotorEnum;
-
-#define MOTOR1_PIN		1
-#define MOTOR2_PIN		0
-#define MOTOR3_PIN		9
-#define MOTOR4_PIN		8
-
-#define MOTOR1_TIM		TIM3
-#define MOTOR2_TIM		TIM3
-#define MOTOR4_TIM		TIM4
-#define MOTOR3_TIM		TIM4
 
 /*
  * Motor 1: Tim3 channel 4
